@@ -170,7 +170,6 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
     datumCallback(request, response);
   }
 
-
   // ROS2 SUBSCRIBERS
   auto custom_qos = rclcpp::SensorDataQoS(rclcpp::KeepLast(1));
   auto subscriber_options = rclcpp::SubscriptionOptions();
@@ -193,7 +192,6 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
       "imu", custom_qos, std::bind(&NavSatTransform::imuCallback, this, _1), subscriber_options);
   }
 
-
   // ROS2 PUBLISHERS
   rclcpp::PublisherOptions publisher_options;
   publisher_options.qos_overriding_options = rclcpp::QosOverridingOptions::with_default_policies();
@@ -211,13 +209,20 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
       "gps/filtered", rclcpp::QoS(10), publisher_options);
   }
 
+  RCLCPP_INFO(
+    this->get_logger(),
+    "\033[1;36m"
+    "\n"
+    "Wait for %0.2f sec before starting computation of transform UTM_frame -> world_frame"
+    "\033[0m",
+    delay);
+    
   // Sleep for the parameterized amount of time, to give
   // other nodes time to start up (not always necessary)
   rclcpp::sleep_for(
     std::chrono::duration_cast<std::chrono::seconds>(
       std::chrono::duration<double>(
         delay)));
-
 
   // ROS2 TIMER
 
@@ -306,12 +311,24 @@ void NavSatTransform::computeTransform()
     imu_yaw += (magnetic_declination_ + yaw_offset_ +
       utm_meridian_convergence_);
 
+
     RCLCPP_INFO(
       this->get_logger(),
-      "Corrected for magnetic declination of %g, "
-      "user-specified offset of %g and meridian convergence of %g. "
-      "Transform heading factor is now %g",
-      magnetic_declination_, yaw_offset_, utm_meridian_convergence_, imu_yaw);
+      "\033[1;36m"
+      "\n"
+      "-----------------------------------------\n"
+      "User specified:\n"
+      "  Magnetic declination : %g\n"
+      "  IMU yaw offset       : %g\n"
+      "-----------------------------------------\n"
+      "Computed meridian convergence : %g\n"
+      "-----------------------------------------\n"
+      "Transform heading factor      : %g"
+      "\033[0m",
+      magnetic_declination_,
+      yaw_offset_,
+      utm_meridian_convergence_,
+      imu_yaw);
 
     // Convert to tf-friendly structures
     tf2::Quaternion imu_quat;
@@ -916,13 +933,17 @@ void NavSatTransform::setTransformGps(
     utm_meridian_convergence_ *= navsat_conversions::RADIANS_PER_DEGREE;
   }
 
-  RCLCPP_INFO(
-    this->get_logger(), "Datum (latitude, longitude, altitude) is (%0.2f, %0.2f, %0.2f)",
-    msg->latitude, msg->longitude, msg->altitude);
-  RCLCPP_INFO(
-    this->get_logger(), "Datum %s coordinate is (%s, %0.2f, %0.2f)",
-    ((use_local_cartesian_) ? "Local Cartesian" : "UTM"), utm_zone_.c_str(), cartesian_x,
-    cartesian_y);
+  RCLCPP_INFO(this->get_logger(), "\033[1;36mDatum (latitude, longitude, altitude) is (%0.2f, %0.2f, %0.2f)\033[0m", 
+              msg->latitude,
+              msg->longitude,
+              msg->altitude);
+
+  RCLCPP_INFO(this->get_logger(), "\033[1;36mDatum (UTM zone, x, y) %s coordinate is (%s, %0.2f, %0.2f)\033[0m",
+              ((use_local_cartesian_) ? "Local Cartesian" : "UTM"), 
+              utm_zone_.c_str(),
+              cartesian_x,
+              cartesian_y);
+
 
   // set the cartesian pose of the GPS sensor in the cartesian reference frame (ENU or UTM). Orientation 
   // of the GPS sensor is not used, so it is set to identity.
