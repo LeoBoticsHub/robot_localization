@@ -160,8 +160,9 @@ private:
   bool prepareGpsOdometry(nav_msgs::msg::Odometry * gps_odom);
 
   /**
-   * @brief Used for setting the GPS data that will be used to compute the
-   * transform
+   * @brief Used for convert the GPS data into cartesian coordinates that will be used to 
+   * compute the frame_T_gps transform, where frame can be "local_enu" or "utm" according
+   * to the parameter use_local_cartesian_
    * @param[in] msg The NavSatFix message to use in the transform
    */
   void setTransformGps(const sensor_msgs::msg::NavSatFix::SharedPtr & msg);
