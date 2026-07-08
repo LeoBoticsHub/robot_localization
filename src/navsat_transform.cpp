@@ -189,7 +189,7 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   {
     // IMU subscription
     imu_sub_ = this->create_subscription<sensor_msgs::msg::Imu>(
-      "imu", custom_qos, std::bind(&NavSatTransform::imuCallback, this, _1), subscriber_options);
+      "imu/data", custom_qos, std::bind(&NavSatTransform::imuCallback, this, _1), subscriber_options);
   }
 
   // ROS2 PUBLISHERS
