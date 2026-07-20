@@ -93,46 +93,33 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   double transform_timeout = 0.0;
 
   // Load the parameters we need
-  magnetic_declination_    = this->declare_parameter("magnetic_declination_radians", 0.0);
-  yaw_offset_              = this->declare_parameter("yaw_offset", 0.0);
-  zero_altitude_           = this->declare_parameter("zero_altitude", false);
-  publish_gps_             = this->declare_parameter("publish_filtered_gps", true);
-  use_odometry_yaw_        = this->declare_parameter("use_odometry_yaw", false);
-  use_manual_datum_        = this->declare_parameter("wait_for_datum", false);
-  use_local_cartesian_     = this->declare_parameter("use_local_cartesian", false);
-  frequency                = this->declare_parameter("frequency", frequency);
-  delay                    = this->declare_parameter("delay", delay);
-  transform_timeout        = this->declare_parameter("transform_timeout", transform_timeout);
-  
-  transform_timeout_ = tf2::durationFromSec(transform_timeout);
+  magnetic_declination_                          = this->declare_parameter("magnetic_declination_radians", 0.0);
+  yaw_offset_                                    = this->declare_parameter("yaw_offset", 0.0);
+  zero_altitude_                                 = this->declare_parameter("zero_altitude", false);
+  publish_gps_                                   = this->declare_parameter("publish_filtered_gps", true);
+  use_odometry_yaw_                              = this->declare_parameter("use_odometry_yaw", false);
+  use_manual_datum_                              = this->declare_parameter("wait_for_datum", false);
+  use_local_cartesian_                           = this->declare_parameter("use_local_cartesian", false);
+  frequency                                      = this->declare_parameter("frequency", frequency);
+  delay                                          = this->declare_parameter("delay", delay);
+  transform_timeout                              = this->declare_parameter("transform_timeout", transform_timeout);
+  transform_timeout_                             = tf2::durationFromSec(transform_timeout);
+  broadcast_cartesian_transform_                 = this->declare_parameter("broadcast_cartesian_transform", broadcast_cartesian_transform_);
+  broadcast_cartesian_transform_as_parent_frame_ = this->declare_parameter("broadcast_cartesian_transform_as_parent_frame", broadcast_cartesian_transform_as_parent_frame_);
 
-  broadcast_cartesian_transform_ =
-    this->declare_parameter("broadcast_utm_transform", broadcast_cartesian_transform_);
-
-  if (broadcast_cartesian_transform_) {
-    RCLCPP_WARN(
-      this->get_logger(), "Parameter 'broadcast_utm_transform' has been deprecated. "
-      "Please use 'broadcast_cartesian_transform' instead.");
-  } else {
-    broadcast_cartesian_transform_ =
-      this->declare_parameter("broadcast_cartesian_transform", broadcast_cartesian_transform_);
-  }
-
-  broadcast_cartesian_transform_as_parent_frame_ =
-    this->declare_parameter(
-    "broadcast_utm_transform_as_parent_frame_",
-    broadcast_cartesian_transform_as_parent_frame_);
-
-  if (broadcast_cartesian_transform_as_parent_frame_) {
-    RCLCPP_WARN(
-      this->get_logger(), "Parameter 'broadcast_utm_transform_as_parent_frame' has been "
-      "deprecated. Please use 'broadcast_cartesian_transform_as_parent_frame' instead.");
-  } else {
-    broadcast_cartesian_transform_as_parent_frame_ =
-      this->declare_parameter(
-      "broadcast_cartesian_transform_as_parent_frame",
-      broadcast_cartesian_transform_as_parent_frame_);
-  }
+  RCLCPP_INFO(this->get_logger(), "\033[1;36m===== Parameters =====\033[0m");
+  RCLCPP_INFO(this->get_logger(), "\033[1;36mfrequency\033[0m                                      : \033[1;36m%0.2f\033[0m", frequency);
+  RCLCPP_INFO(this->get_logger(), "\033[1;36mdelay\033[0m                                          : \033[1;36m%0.2f\033[0m", delay);
+  RCLCPP_INFO(this->get_logger(), "\033[1;36mmagnetic_declination_radians\033[0m                   : \033[1;36m%0.2f\033[0m", magnetic_declination_);
+  RCLCPP_INFO(this->get_logger(), "\033[1;36myaw_offset\033[0m                                     : \033[1;36m%0.2f\033[0m", yaw_offset_);
+  RCLCPP_INFO(this->get_logger(), "\033[1;36mzero_altitude\033[0m                                  : \033[1;36m%s\033[0m", zero_altitude_ ? "true" : "false");
+  RCLCPP_INFO(this->get_logger(), "\033[1;36mbroadcast_cartesian_transform\033[0m                  : \033[1;36m%s\033[0m", broadcast_cartesian_transform_ ? "true" : "false");
+  RCLCPP_INFO(this->get_logger(), "\033[1;36mbroadcast_cartesian_transform_as_parent_frame_\033[0m : \033[1;36m%s\033[0m", broadcast_cartesian_transform_as_parent_frame_ ? "true" : "false");
+  RCLCPP_INFO(this->get_logger(), "\033[1;36mpublish_filtered_gps\033[0m                           : \033[1;36m%s\033[0m", publish_gps_ ? "true" : "false");
+  RCLCPP_INFO(this->get_logger(), "\033[1;36muse_odometry_yaw\033[0m                               : \033[1;36m%s\033[0m", use_odometry_yaw_ ? "true" : "false");
+  RCLCPP_INFO(this->get_logger(), "\033[1;36mwait_for_datum\033[0m                                 : \033[1;36m%s\033[0m", use_manual_datum_ ? "true" : "false");
+  RCLCPP_INFO(this->get_logger(), "\033[1;36muse_local_cartesian\033[0m                            : \033[1;36m%s\033[0m", use_local_cartesian_ ? "true" : "false");
+  RCLCPP_INFO(this->get_logger(), "\033[1;36mtransform_timeout\033[0m                              : \033[1;36m%0.2f\033[0m", transform_timeout);
 
   parameters_callback_handle_ = this->add_on_set_parameters_callback(
     std::bind(&NavSatTransform::parametersCallback, this, std::placeholders::_1));
@@ -147,7 +134,10 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
 
   std::vector<double> datum_vals;
   if (use_manual_datum_) {
+    
     datum_vals = this->declare_parameter("datum", datum_vals);
+    
+    RCLCPP_INFO(this->get_logger(), "\033[1;36mdatum\033[0m                                          : \033[1;36m[%0.2f, %0.2f, %0.2f]\033[0m", datum_vals[0], datum_vals[1], datum_vals[2]);
 
     double datum_lat = 0.0;
     double datum_lon = 0.0;
