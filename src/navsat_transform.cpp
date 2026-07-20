@@ -88,9 +88,6 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   latest_cartesian_covariance_.resize(POSE_SIZE, POSE_SIZE);
   latest_odom_covariance_.resize(POSE_SIZE, POSE_SIZE);
 
-  double frequency         = 10.0;
-  double delay             = 0.0;
-  double transform_timeout = 0.0;
 
   // Load the parameters we need
   magnetic_declination_                          = this->declare_parameter("magnetic_declination_radians", 0.0);
@@ -100,12 +97,19 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   use_odometry_yaw_                              = this->declare_parameter("use_odometry_yaw", false);
   use_manual_datum_                              = this->declare_parameter("wait_for_datum", false);
   use_local_cartesian_                           = this->declare_parameter("use_local_cartesian", false);
-  frequency                                      = this->declare_parameter("frequency", frequency);
-  delay                                          = this->declare_parameter("delay", delay);
-  transform_timeout                              = this->declare_parameter("transform_timeout", transform_timeout);
+  double frequency                               = this->declare_parameter("frequency", 10.0);
+  double delay                                   = this->declare_parameter("delay", 0.0);
+  double transform_timeout                       = this->declare_parameter("transform_timeout", 0.0);
   transform_timeout_                             = tf2::durationFromSec(transform_timeout);
-  broadcast_cartesian_transform_                 = this->declare_parameter("broadcast_cartesian_transform", broadcast_cartesian_transform_);
-  broadcast_cartesian_transform_as_parent_frame_ = this->declare_parameter("broadcast_cartesian_transform_as_parent_frame", broadcast_cartesian_transform_as_parent_frame_);
+  broadcast_cartesian_transform_                 = this->declare_parameter("broadcast_cartesian_transform", false);
+  broadcast_cartesian_transform_as_parent_frame_ = this->declare_parameter("broadcast_cartesian_transform_as_parent_frame", false);
+
+  
+  std::string imu_topic          = this->declare_parameter("imu_topic", "imu/data");
+  std::string gps_topic          = this->declare_parameter("gps_topic", "gps/fix");
+  std::string odom_topic         = this->declare_parameter("odom_topic", "odometry/filtered");
+  std::string gps_odom_topic     = this->declare_parameter("gps_odom_topic", "odometry/gps");
+  std::string gps_filtered_topic = this->declare_parameter("gps_filtered_topic", "gps/filtered");
 
   RCLCPP_INFO(this->get_logger(), "\033[1;36m===== Parameters =====\033[0m");
   RCLCPP_INFO(this->get_logger(), "\033[1;36mfrequency\033[0m                                      : \033[1;36m%0.2f\033[0m", frequency);
@@ -120,6 +124,11 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   RCLCPP_INFO(this->get_logger(), "\033[1;36mwait_for_datum\033[0m                                 : \033[1;36m%s\033[0m", use_manual_datum_ ? "true" : "false");
   RCLCPP_INFO(this->get_logger(), "\033[1;36muse_local_cartesian\033[0m                            : \033[1;36m%s\033[0m", use_local_cartesian_ ? "true" : "false");
   RCLCPP_INFO(this->get_logger(), "\033[1;36mtransform_timeout\033[0m                              : \033[1;36m%0.2f\033[0m", transform_timeout);
+  RCLCPP_INFO(this->get_logger(), "\033[1;36mtransform_timeout\033[0m                              : \033[1;36m%s\033[0m", imu_topic.c_str());
+  RCLCPP_INFO(this->get_logger(), "\033[1;36mimu_topic\033[0m                                      : \033[1;36m%s\033[0m", gps_topic.c_str());
+  RCLCPP_INFO(this->get_logger(), "\033[1;36mgps_topic\033[0m                                      : \033[1;36m%s\033[0m", odom_topic.c_str());
+  RCLCPP_INFO(this->get_logger(), "\033[1;36modom_topic\033[0m                                     : \033[1;36m%s\033[0m", gps_odom_topic.c_str());
+  RCLCPP_INFO(this->get_logger(), "\033[1;36mgps_odom_topic\033[0m                                 : \033[1;36m%s\033[0m", gps_filtered_topic.c_str());
 
   parameters_callback_handle_ = this->add_on_set_parameters_callback(
     std::bind(&NavSatTransform::parametersCallback, this, std::placeholders::_1));
@@ -168,18 +177,18 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   
   // odom subscription
   odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
-    "odometry/filtered", custom_qos, std::bind(
+    odom_topic, custom_qos, std::bind(
       &NavSatTransform::odomCallback, this, _1), subscriber_options);
   // GPS subscription
   gps_sub_ = this->create_subscription<sensor_msgs::msg::NavSatFix>(
-    "gps/fix", custom_qos, std::bind(&NavSatTransform::gpsFixCallback, this, _1),
+    gps_topic, custom_qos, std::bind(&NavSatTransform::gpsFixCallback, this, _1),
     subscriber_options);
 
   if (!use_odometry_yaw_ && !use_manual_datum_)
   {
     // IMU subscription
     imu_sub_ = this->create_subscription<sensor_msgs::msg::Imu>(
-      "imu/data", custom_qos, std::bind(&NavSatTransform::imuCallback, this, _1), subscriber_options);
+      imu_topic, custom_qos, std::bind(&NavSatTransform::imuCallback, this, _1), subscriber_options);
   }
 
   // ROS2 PUBLISHERS
@@ -189,14 +198,14 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   // GPS odometry publisher
   gps_odom_pub_ =
     this->create_publisher<nav_msgs::msg::Odometry>(
-    "odometry/gps", rclcpp::QoS(10), publisher_options);
+    gps_odom_topic, rclcpp::QoS(10), publisher_options);
 
   if (publish_gps_)
   {
     // Filtered GPS publisher
     filtered_gps_pub_ =
       this->create_publisher<sensor_msgs::msg::NavSatFix>(
-      "gps/filtered", rclcpp::QoS(10), publisher_options);
+      gps_filtered_topic, rclcpp::QoS(10), publisher_options);
   }
 
   RCLCPP_INFO(

@@ -48,3 +48,17 @@ navsat_transform_node:
 # and heading in radians. As navsat_transform_node assumes an ENU standard, a 0 heading corresponds to east.
         datum: [55.944904, -3.186693, 0.0]
 
+# input: name of the topic containing a sensor_msgs/Imu.html message with orientation data
+imu_topic: imu/data
+
+# input: name of the topic containing a sensor_msgs/NavSatFix.html message containing your robot’s GPS coordinates
+gps_topic: gps/fix
+
+# input: name of the topic containing a nav_msgs/Odometry.html message of your robot’s current position. This is needed in the event that your first GPS reading comes after your robot has attained some non-zero pose.
+odom_topic: odometry/filtered
+
+# output: name of the topic containing a nav_msgs/Odometry message containing the GPS coordinates of your robot, transformed into its world coordinate frame. This message can be directly fused into robot_localization‘s state estimation nodes.
+gps_odom_topic: odometry/gps
+
+# output (optional): name of the topic containing a sensor_msgs/NavSatFix.html message containing your robot’s world frame position, transformed into GPS coordinates
+gps_filtered_topic: gps/filtered
