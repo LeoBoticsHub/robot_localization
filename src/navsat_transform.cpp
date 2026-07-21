@@ -111,7 +111,7 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   std::string gps_odom_topic     = this->declare_parameter("gps_odom_topic", "odometry/gps");
   std::string gps_filtered_topic = this->declare_parameter("gps_filtered_topic", "gps/filtered");
 
-  RCLCPP_INFO(this->get_logger(), "\033[1;36m===== Parameters =====\033[0m");
+  RCLCPP_INFO(this->get_logger(), "\033[1;36m===== navsat_transform_node parameters =====\033[0m");
   RCLCPP_INFO(this->get_logger(), "\033[1;36mfrequency\033[0m                                      : \033[1;36m%0.2f\033[0m", frequency);
   RCLCPP_INFO(this->get_logger(), "\033[1;36mdelay\033[0m                                          : \033[1;36m%0.2f\033[0m", delay);
   RCLCPP_INFO(this->get_logger(), "\033[1;36mmagnetic_declination_radians\033[0m                   : \033[1;36m%0.2f\033[0m", magnetic_declination_);
