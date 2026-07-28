@@ -50,6 +50,8 @@ The diagram below extends the one from the official [Integrating GPS → Details
 
 **This section assumes an AHRS IMU that provides heading relative to magnetic north**. Under that assumption, the aim is to find the robot world frame (e.g. `map`), expressed as an ENU frame (x -> east, y -> north and z -> up) with respect to the UTM grid frame, following the REP-105 convention. That means solving for:
 
+> **Note:** for a valid global localization in the ENU `map` frame, the IMU must follow the [REP-105](https://www.ros.org/reps/rep-0105.html) convention and include a magnetometer, so it can provide an absolute (earth-referenced) heading.
+
 - **X_UTM, Y_UTM**: the 2D position of the `map` frame origin in the UTM frame. These come directly from converting the GPS lat/lon fix to UTM cartesian coordinates.
 - **Θ**: the orientation (yaw) of the `map` frame in the UTM frame, obtained by correcting the IMU's raw heading with three angles:
 
