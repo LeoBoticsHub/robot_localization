@@ -5,6 +5,10 @@ robot_localization is a package of nonlinear state estimation nodes. The package
 
 Please see documentation here: http://wiki.ros.org/robot_localization
 
+## Requirements
+
+- ROS2 Humble
+
 ## About the following documentation
 
 > **This is *supplementary* documentation only.** It does not replace the official docs — for the general explanation of the package and of `navsat_transform_node`, always refer first to:
