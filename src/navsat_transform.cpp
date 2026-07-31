@@ -124,11 +124,11 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   RCLCPP_INFO(this->get_logger(), "\033[1;36mwait_for_datum\033[0m                                 : \033[1;36m%s\033[0m", use_manual_datum_ ? "true" : "false");
   RCLCPP_INFO(this->get_logger(), "\033[1;36muse_local_cartesian\033[0m                            : \033[1;36m%s\033[0m", use_local_cartesian_ ? "true" : "false");
   RCLCPP_INFO(this->get_logger(), "\033[1;36mtransform_timeout\033[0m                              : \033[1;36m%0.2f\033[0m", transform_timeout);
-  RCLCPP_INFO(this->get_logger(), "\033[1;36mtransform_timeout\033[0m                              : \033[1;36m%s\033[0m", imu_topic.c_str());
-  RCLCPP_INFO(this->get_logger(), "\033[1;36mimu_topic\033[0m                                      : \033[1;36m%s\033[0m", gps_topic.c_str());
-  RCLCPP_INFO(this->get_logger(), "\033[1;36mgps_topic\033[0m                                      : \033[1;36m%s\033[0m", odom_topic.c_str());
-  RCLCPP_INFO(this->get_logger(), "\033[1;36modom_topic\033[0m                                     : \033[1;36m%s\033[0m", gps_odom_topic.c_str());
-  RCLCPP_INFO(this->get_logger(), "\033[1;36mgps_odom_topic\033[0m                                 : \033[1;36m%s\033[0m", gps_filtered_topic.c_str());
+  RCLCPP_INFO(this->get_logger(), "\033[1;36mimu_topic\033[0m                                      : \033[1;36m%s\033[0m", imu_topic.c_str());
+  RCLCPP_INFO(this->get_logger(), "\033[1;36mgps_topic\033[0m                                      : \033[1;36m%s\033[0m", gps_topic.c_str());
+  RCLCPP_INFO(this->get_logger(), "\033[1;36modom_topic\033[0m                                     : \033[1;36m%s\033[0m", odom_topic.c_str());
+  RCLCPP_INFO(this->get_logger(), "\033[1;36mgps_odom_topic\033[0m                                 : \033[1;36m%s\033[0m", gps_odom_topic.c_str());
+  RCLCPP_INFO(this->get_logger(), "\033[1;36mgps_filtered_topic\033[0m                             : \033[1;36m%s\033[0m", gps_filtered_topic.c_str());
 
   parameters_callback_handle_ = this->add_on_set_parameters_callback(
     std::bind(&NavSatTransform::parametersCallback, this, std::placeholders::_1));
