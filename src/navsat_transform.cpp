@@ -47,6 +47,7 @@
 #include <GeographicLib/LocalCartesian.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <rclcpp/wait_for_message.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/nav_sat_fix.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
@@ -170,10 +171,13 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   }
 
   // ROS2 SUBSCRIBERS
-  auto custom_qos = rclcpp::SensorDataQoS(rclcpp::KeepLast(1));
+  auto custom_qos = rclcpp::SensorDataQoS(rclcpp::KeepLast(1)); // QoS
   auto subscriber_options = rclcpp::SubscriptionOptions();
   subscriber_options.qos_overriding_options =
     rclcpp::QosOverridingOptions::with_default_policies();
+  
+  // Create all subscriptions before waiting, so their queues can receive data
+  // while the initial messages are consumed in odom -> GPS -> IMU order.
   
   // odom subscription
   odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
@@ -183,12 +187,42 @@ NavSatTransform::NavSatTransform(const rclcpp::NodeOptions & options)
   gps_sub_ = this->create_subscription<sensor_msgs::msg::NavSatFix>(
     gps_topic, custom_qos, std::bind(&NavSatTransform::gpsFixCallback, this, _1),
     subscriber_options);
-
+  
   if (!use_odometry_yaw_ && !use_manual_datum_)
   {
     // IMU subscription
     imu_sub_ = this->create_subscription<sensor_msgs::msg::Imu>(
       imu_topic, custom_qos, std::bind(&NavSatTransform::imuCallback, this, _1), subscriber_options);
+  }
+
+  // Wait for messages
+  const auto context = this->get_node_options().context();
+
+  RCLCPP_INFO(this->get_logger(), "\033[1;33mWaiting for odometry on topic '%s'\033[0m", odom_topic.c_str());
+  nav_msgs::msg::Odometry initial_odom;
+  if (rclcpp::wait_for_message(initial_odom, odom_sub_, context))
+  {
+    odomCallback(std::make_shared<nav_msgs::msg::Odometry>(initial_odom));
+    RCLCPP_INFO(this->get_logger(), "\033[1;32mOdometry received\033[0m");
+  }
+
+  RCLCPP_INFO(this->get_logger(), "\033[1;33mWaiting for GPS data on topic '%s'\033[0m", gps_topic.c_str());
+  sensor_msgs::msg::NavSatFix initial_gps;
+  if (rclcpp::wait_for_message(initial_gps, gps_sub_, context))
+  {
+    gpsFixCallback(std::make_shared<sensor_msgs::msg::NavSatFix>(initial_gps));
+    RCLCPP_INFO(this->get_logger(), "\033[1;32mGPS data received\033[0m");
+  }
+
+  if (!use_odometry_yaw_ && !use_manual_datum_)
+  {
+    RCLCPP_INFO(this->get_logger(), "\033[1;33mWaiting for IMU data on topic '%s'\033[0m", imu_topic.c_str());
+    sensor_msgs::msg::Imu initial_imu;
+    if (rclcpp::wait_for_message(initial_imu, imu_sub_, context))
+    {
+      imuCallback(std::make_shared<sensor_msgs::msg::Imu>(initial_imu));
+      RCLCPP_INFO(this->get_logger(), "\033[1;32mIMU data received\033[0m");
+    } 
   }
 
   // ROS2 PUBLISHERS
