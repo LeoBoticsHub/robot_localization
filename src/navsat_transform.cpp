@@ -682,9 +682,48 @@ void NavSatTransform::gpsFixCallback(
       "Will assume navsat device is mounted at robot's origin");
   }
 
+  // Print GPS status just if it changes
+  static int8_t prev_gps_status = sensor_msgs::msg::NavSatStatus::STATUS_NO_FIX - 1; // status = -2 is undefined status
+  int8_t gps_status = msg->status.status;
+
+  if (gps_status != prev_gps_status)
+  {
+    std::string gps_status_string;
+
+    switch (gps_status)
+    {
+      case sensor_msgs::msg::NavSatStatus::STATUS_NO_FIX:
+        gps_status_string = "NO FIX";
+        break;
+
+      case sensor_msgs::msg::NavSatStatus::STATUS_FIX:
+        gps_status_string = "FIX";
+        break;
+
+      case sensor_msgs::msg::NavSatStatus::STATUS_SBAS_FIX:
+        gps_status_string = "SBAS FIX";
+        break;
+
+      case sensor_msgs::msg::NavSatStatus::STATUS_GBAS_FIX:
+        gps_status_string = "GBAS FIX (the good one for ublox GPS :)";
+        break;
+
+      default:
+        gps_status_string = "UNKNOWN";
+        break;
+    }
+
+    RCLCPP_INFO(
+      this->get_logger(),
+      "GPS status changed to: %s",
+      gps_status_string.c_str());
+
+    prev_gps_status = gps_status;
+  }
+
   // Make sure the GPS data is usable
   bool good_gps =
-    (msg->status.status != sensor_msgs::msg::NavSatStatus::STATUS_NO_FIX &&
+    (gps_status != sensor_msgs::msg::NavSatStatus::STATUS_NO_FIX &&
     !std::isnan(msg->altitude) && !std::isnan(msg->latitude) &&
     !std::isnan(msg->longitude));
 
