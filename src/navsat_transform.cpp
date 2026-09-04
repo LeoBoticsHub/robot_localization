@@ -715,7 +715,7 @@ void NavSatTransform::gpsFixCallback(
 
     RCLCPP_INFO(
       this->get_logger(),
-      "GPS status changed to: %s",
+      "\033[1;36mGPS status changed to: %s\033[0m",
       gps_status_string.c_str());
 
     prev_gps_status = gps_status;
